@@ -62,6 +62,8 @@ pip install tkinter-table -y
 
 编辑 `short-mt-gpu.py`，修改以下配置：
 
+默认使用SenseVoiceSmall，纯中文语言建议这个模型。
+
 ```python
 # 模型路径（修改为您的 FunASR 模型路径）
 MODEL_DIR = r"I:\AI\APP\FunASR\models\SenseVoiceSmall"
