@@ -1,0 +1,24 @@
+# FunASR Video Transcriber - Python Dependencies
+# Tested with Python 3.12 + PyTorch 2.10.0 + CUDA 12.8
+
+# Core ML Framework
+# Install PyTorch with CUDA 12.8 support for RTX 50 series (Blackwell/sm_120)
+# Use index URL: https://download.pytorch.org/whl/cu128
+torch==2.10.0
+torchvision==0.25.0
+torchaudio==2.10.0
+
+# Speech Recognition
+funasr>=2.0.0
+modelscope>=1.20.0
+
+# Web Requests (for LM Studio API)
+requests>=2.31.0
+
+# GUI Framework (usually included with Python, but listed for completeness)
+# tkinter is part of Python standard library on Windows/macOS
+# On Linux: sudo apt-get install python3-tk
+
+# Optional: For better performance
+# numpy>=1.24.0
+# pandas>=2.0.0
