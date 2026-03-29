@@ -1,16 +1,3 @@
----
-AIGC:
-    ContentProducer: Minimax Agent AI
-    ContentPropagator: Minimax Agent AI
-    Label: AIGC
-    ProduceID: 1ec4f87f54055523d232f718d6fa08f6
-    PropagateID: 1ec4f87f54055523d232f718d6fa08f6
-    ReservedCode1: 30450220669154b941c442b7b392c3f685067b403c7a1fa1fd0d89c4ad0b7d37d113125b0221009a70bdb6f5f97f5569396dced51311ce41abb5b2045ba3bcdb45dec16bf3072e
-    ReservedCode2: 3046022100dac7d9ebb83aae0d7ed24a0f42afd4d5a6adabed0ac6c9873cee9210dc55db2002210097393fe4d24e0f630aa441aa69809c0b80d726b82ecab749726266bdb11b297c
----
-
-# FunASR-GPU-Video-Transcriber
-
 基于 FunASR 的视频转录工具，支持 GPU 加速和 LLM 智能校对。
 
 ## 功能特性
