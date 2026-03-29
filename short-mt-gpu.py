@@ -2,6 +2,7 @@ import os
 import sys
 import time
 import threading
+import gc  # <--- 新增：引入垃圾回收模块
 import requests
 import tkinter as tk
 from tkinter import filedialog, ttk, scrolledtext
@@ -125,11 +126,11 @@ class ShortVideoApp:
 
         # 插入默认提示词
         default_prompt = (
-            "你是一位资深的中医文献校对专家。请对以下语音识别文本进行专业校对：\n"
-            "1. **术语修正**：重点修正中药名（如'当归'、'黄芪'）、穴位名、中医病症名等同音错别字。\n"
-            "2. **标点规范**：调整标点符号，使其符合医学文献规范，正确使用顿号列举药材。\n"
-            "3. **逻辑通顺**：在保持原意的基础上，修正口语化的语法错误，使语句通顺流畅。\n\n"
-            "请直接输出校对后的文本，不要包含任何开场白或解释：\n\n"
+            "你是一个专业的文本校对助手。请处理我提供的文本，要求如下：\n"
+            "删除所有无意义的标记字符，例如 <|zh|>、<|HAPPY|>、<|BGM|>、<|withitn|> 等类似格式的无效内容。\n"
+            "对文本进行适当分段，根据语义和逻辑将冗长的段落拆分成易于阅读的短段落。\n"
+            "格式化文本，确保每个段落的段首空两行。\n"
+            "请直接输出处理后的最终文本，不要有任何解释、说明或开场白。\n"
             "{text}"
         )
         self.text_prompt.insert(tk.END, default_prompt)
@@ -267,12 +268,13 @@ class ShortVideoApp:
             try:
                 self.model = AutoModel(
                     model=MODEL_DIR,
-                    device=device_str,  # 使用GPU或CPU
+                    device=device_str,
                     disable_update=True,
-                    vad_model=None,
-                    # GPU优化参数
-                    ncpu=8 if not use_gpu else 1,  # GPU模式减少CPU线程
+                    vad_model="fsmn-vad",  # <--- 修改为启用 VAD 模型
+                    # punc_model="ct-punc", # 建议同时也加上标点模型，效果更好
+                    ncpu=8 if not use_gpu else 1,
                 )
+                
                 load_end = time.time()
                 self.log(f"模型加载完成！耗时: {load_end - load_start:.2f}s", "success")
 
@@ -374,13 +376,11 @@ class ShortVideoApp:
             lang = self.combo_lang.get()
             if lang == "auto":
                 lang = None  # FunASR auto detection
-
             # 获取批处理大小
             try:
                 batch_size = int(self.spin_batch.get())
             except:
                 batch_size = 60
-
             res = self.model.generate(
                 input=video_path,
                 cache={},
@@ -390,21 +390,18 @@ class ShortVideoApp:
             )
             asr_time = time.time() - task_start
             self.log(f"  > [{filename}] ASR完成，耗时: {asr_time:.2f}s", "success")
-
             raw_text = ""
             if res and len(res) > 0:
                 raw_text = res[0]['text'] if isinstance(res, list) else res['text']
             if not raw_text:
                 self.log(f"  > [{filename}] 警告: 未识别到文字内容。", "warn")
                 return
-
             # 2. LLM 校对 (内部已加锁)
             self.log(f"  > [{filename}] 等待 LLM 校对...")
             llm_start = time.time()
             corrected_text, status = self.correct_text_with_llm(raw_text)
             llm_time = time.time() - llm_start
             self.log(f"  > [{filename}] 校对结果: {status}", "info")
-
             # 3. 保存 MD
             with open(output_path, "w", encoding="utf-8") as f:
                 f.write(f"# {os.path.splitext(filename)[0]} 转录记录\n\n")
@@ -412,12 +409,22 @@ class ShortVideoApp:
                 f.write(f"**加速模式**: {'GPU' if self.var_use_gpu.get() else 'CPU'}\n\n")
                 f.write("## 校对后文本\n\n")
                 f.write(corrected_text + "\n")
-
             total_time = time.time() - task_start
             self.log(f"  > [{filename}] 完成！总耗时: {total_time:.2f}s", "success")
-
         except Exception as e:
             self.log(f"  > 处理出错 {filename}: {e}", "error")
+        finally:
+            # === 新增：自动清理 GPU 缓存 ===
+            if self.var_use_gpu.get():
+                try:
+                    import torch
+                    # 1. 先回收 Python 对象
+                    gc.collect()
+                    # 2. 清空 PyTorch CUDA 缓存
+                    torch.cuda.empty_cache()
+                    self.log(f"  > [{filename}] GPU缓存清理完成", "gpu")
+                except Exception as e:
+                    self.log(f"  > 清理GPU缓存时出错: {e}", "warn")
 
     def start_processing(self):
         if self.is_processing:
